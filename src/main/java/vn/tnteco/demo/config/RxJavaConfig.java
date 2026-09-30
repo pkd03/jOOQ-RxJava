@@ -2,8 +2,7 @@ package vn.tnteco.demo.config;
 
 import io.reactivex.rxjava3.plugins.RxJavaPlugins;
 import jakarta.annotation.PostConstruct;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 
 /**
@@ -15,10 +14,9 @@ import org.springframework.context.annotation.Configuration;
  * Nếu không thiết lập errorHandler, lỗi này sẽ làm văng Thread.UncaughtExceptionHandler.
  * Thiết lập errorHandler ở đây giúp ghi log lại các lỗi này một cách an toàn mà không làm sập ứng dụng.
  */
+@Slf4j
 @Configuration
 public class RxJavaConfig {
-
-    private static final Logger log = LoggerFactory.getLogger(RxJavaConfig.class);
 
     @PostConstruct
     public void configureRxJavaErrorHandler() {

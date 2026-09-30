@@ -3,9 +3,8 @@ package vn.tnteco.demo.exception;
 import io.reactivex.rxjava3.exceptions.CompositeException;
 import io.reactivex.rxjava3.exceptions.UndeliverableException;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.jooq.exception.DataAccessException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -21,10 +20,9 @@ import java.util.concurrent.ExecutionException;
  * 3. Hỗ trợ giải nén (unwrap) các ngoại lệ đặc trưng của RxJava 3 như CompositeException
  *    (sinh ra khi Single.zip có nhiều nguồn cùng bắn lỗi) hoặc UndeliverableException.
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
      * Bắt AppException nghiệp vụ chủ động ném ra trong luồng xử lý.

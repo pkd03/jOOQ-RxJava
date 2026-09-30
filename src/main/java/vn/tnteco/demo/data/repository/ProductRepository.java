@@ -2,9 +2,10 @@ package vn.tnteco.demo.data.repository;
 
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
-import vn.tnteco.demo.data.dto.ProductRecordDto;
+import vn.tnteco.demo.data.dto.response.ProductResponse;
 import vn.tnteco.demo.jooq.tables.records.ProductsRecord;
 
 import java.util.Optional;
@@ -16,19 +17,16 @@ import static vn.tnteco.demo.jooq.Tables.PRODUCTS;
  * Mọi thao tác I/O blocking đều bọc trong Single.fromCallable và chạy trên Schedulers.io().
  */
 @Repository
+@RequiredArgsConstructor
 public class ProductRepository {
 
     private final DSLContext dsl;
 
-    public ProductRepository(DSLContext dsl) {
-        this.dsl = dsl;
-    }
-
     /**
      * Tìm sản phẩm theo ID.
-     * Trả về Single<Optional<ProductRecordDto>> - an toàn tuyệt đối với RxJava 3 (không bao giờ emit null).
+     * Trả về Single<Optional<ProductResponse>> - an toàn tuyệt đối với RxJava 3 (không bao giờ emit null).
      */
-    public Single<Optional<ProductRecordDto>> findById(Long id) {
+    public Single<Optional<ProductResponse>> findById(Long id) {
         return Single.fromCallable(() -> {
             Optional<ProductsRecord> recordOpt = dsl.selectFrom(PRODUCTS)
                     .where(PRODUCTS.ID.eq(id))
@@ -52,12 +50,12 @@ public class ProductRepository {
                 .execute();
     }
 
-    private ProductRecordDto mapToDto(ProductsRecord r) {
-        return new ProductRecordDto(
-                r.getId(),
-                r.getName(),
-                r.getPrice(),
-                r.getStock()
-        );
+    private ProductResponse mapToDto(ProductsRecord r) {
+        return ProductResponse.builder()
+                .id(r.getId())
+                .name(r.getName())
+                .price(r.getPrice())
+                .stock(r.getStock())
+                .build();
     }
 }

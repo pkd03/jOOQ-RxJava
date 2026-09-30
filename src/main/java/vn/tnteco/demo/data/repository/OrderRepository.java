@@ -2,10 +2,11 @@ package vn.tnteco.demo.data.repository;
 
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
-import vn.tnteco.demo.data.dto.OrderRecordDto;
+import vn.tnteco.demo.data.dto.response.OrderResponse;
 import vn.tnteco.demo.exception.AppException;
 import vn.tnteco.demo.exception.ErrorCode;
 import vn.tnteco.demo.jooq.tables.records.OrdersRecord;
@@ -15,26 +16,21 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static vn.tnteco.demo.jooq.Tables.ORDERS;
-import static vn.tnteco.demo.jooq.Tables.PRODUCTS;
 
 /**
  * Repository thao tác bảng ORDERS và thực hiện transaction liên quan giữa ORDERS và PRODUCTS.
  */
 @Repository
+@RequiredArgsConstructor
 public class OrderRepository {
 
     private final DSLContext dsl;
     private final ProductRepository productRepository;
 
-    public OrderRepository(DSLContext dsl, ProductRepository productRepository) {
-        this.dsl = dsl;
-        this.productRepository = productRepository;
-    }
-
     /**
      * Lấy toàn bộ danh sách đơn hàng của một user theo thứ tự mới nhất trước.
      */
-    public Single<List<OrderRecordDto>> findByUserId(Long userId) {
+    public Single<List<OrderResponse>> findByUserId(Long userId) {
         return Single.fromCallable(() -> dsl.selectFrom(ORDERS)
                 .where(ORDERS.USER_ID.eq(userId))
                 .orderBy(ORDERS.CREATED_AT.desc())
@@ -46,7 +42,7 @@ public class OrderRepository {
     /**
      * Lấy N đơn hàng gần nhất của một user.
      */
-    public Single<List<OrderRecordDto>> findRecentOrdersByUserId(Long userId, int limit) {
+    public Single<List<OrderResponse>> findRecentOrdersByUserId(Long userId, int limit) {
         return Single.fromCallable(() -> dsl.selectFrom(ORDERS)
                 .where(ORDERS.USER_ID.eq(userId))
                 .orderBy(ORDERS.CREATED_AT.desc())
@@ -82,7 +78,7 @@ public class OrderRepository {
      * 3. Chèn đơn hàng mới vào bảng ORDERS và RETURNING thông tin vừa chèn.
      * 4. Bọc toàn bộ block trong Single.fromCallable và chạy trên Schedulers.io().
      */
-    public Single<OrderRecordDto> createOrderInTransaction(Long userId, Long productId, int quantity, BigDecimal unitPrice) {
+    public Single<OrderResponse> createOrderInTransaction(Long userId, Long productId, int quantity, BigDecimal unitPrice) {
         return Single.fromCallable(() -> dsl.transactionResult(configuration -> {
             DSLContext txDsl = DSL.using(configuration);
 
@@ -110,14 +106,14 @@ public class OrderRepository {
         })).subscribeOn(Schedulers.io());
     }
 
-    private OrderRecordDto mapToDto(OrdersRecord r) {
-        return new OrderRecordDto(
-                r.getId(),
-                r.getUserId(),
-                r.getProductId(),
-                r.getQuantity(),
-                r.getAmount(),
-                r.getCreatedAt()
-        );
+    private OrderResponse mapToDto(OrdersRecord r) {
+        return OrderResponse.builder()
+                .id(r.getId())
+                .userId(r.getUserId())
+                .productId(r.getProductId())
+                .quantity(r.getQuantity())
+                .amount(r.getAmount())
+                .createdAt(r.getCreatedAt())
+                .build();
     }
 }

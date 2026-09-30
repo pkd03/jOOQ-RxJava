@@ -8,8 +8,9 @@ Dự án mẫu thực hành kết hợp **jOOQ** (truy vấn SQL an toàn kiểu
 - **Java 17**, **Maven**
 - **Spring Boot 3.3.4** (Spring Web MVC với custom `SingleReturnValueHandler` adapter chuyển `Single<T>` -> `DeferredResult<T>`)
 - **RxJava 3**: `Single`, `Schedulers.io()`, `TestObserver`
-- **jOOQ 3.19.x** (tự động sinh mã nguồn Records, Tables từ schema bằng plugin `jooq-codegen-maven`)
-- **H2 in-memory Database** (chế độ PostgreSQL compatibility: `MODE=PostgreSQL`)
+- **jOOQ 3.19.x** (tự động sinh mã nguồn Records, Tables từ schema PostgreSQL bằng plugin `jooq-codegen-maven`)
+- **PostgreSQL Database** (kết nối trực tiếp hoặc qua Docker Compose `postgres:16-alpine`)
+- **Lombok** (`@RequiredArgsConstructor`, `@Slf4j`, `@Data`, `@Builder`, `@Getter`, `@AllArgsConstructor`)
 - **Apache Commons Lang 3** (`Pair`)
 - **JUnit 5**, **Mockito**, **Spring Boot Test**
 
@@ -24,7 +25,7 @@ src/main/
 ├── resources/
 │   ├── schema.sql                         # DDL tạo bảng: users, products, orders
 │   ├── data.sql                           # Dữ liệu mẫu (5 users, 5 products, 10 orders)
-│   └── application.properties             # Cấu hình H2, jOOQ dialect H2/PostgreSQL
+│   └── application.properties             # Cấu hình PostgreSQL, jOOQ dialect POSTGRES
 └── java/
     └── vn.tnteco.demo/
         ├── DemoApplication.java           # Main class Spring Boot 3
@@ -32,7 +33,7 @@ src/main/
         ├── config/                        # Cấu hình hệ thống & Adapter Spring MVC
         │   ├── SingleReturnValueHandler.java # AsyncHandler adapter Single<T> -> DeferredResult<T>
         │   ├── WebMvcConfig.java             # Đăng ký adapter vào WebMvcConfigurer
-        │   └── RxJavaConfig.java             # Quản lý lỗi UndeliverableException toàn cục
+        │   └── RxJavaConfig.java             # Quản lý lỗi UndeliverableException toàn cục (@Slf4j)
         │
         ├── exception/                     # Chuẩn hóa mã lỗi & Exception tập trung
         │   ├── ErrorCode.java                # Enum mã lỗi (USER_NOT_FOUND, INSUFFICIENT_STOCK, ...)
@@ -45,13 +46,15 @@ src/main/
         │
         ├── data/                          # Tầng dữ liệu & Repository dùng jOOQ
         │   ├── dto/
-        │   │   ├── CreateOrderRequest.java       # Request tạo đơn hàng (record)
-        │   │   ├── UserRecordDto.java            # DTO người dùng (record)
-        │   │   ├── ProductRecordDto.java         # DTO sản phẩm (record)
-        │   │   ├── OrderRecordDto.java           # DTO đơn hàng (record)
-        │   │   ├── UserProfileResponse.java      # Response thông tin profile (record)
-        │   │   ├── UserDashboardResponse.java    # Response thông tin dashboard (record)
-        │   │   └── ProductAvailabilityResponse.java
+        │   │   ├── request/
+        │   │   │   └── CreateOrderRequest.java       # Request tạo đơn hàng (class + Lombok)
+        │   │   └── response/
+        │   │       ├── UserResponse.java             # Response thông tin người dùng (class + Lombok)
+        │   │       ├── ProductResponse.java          # Response thông tin sản phẩm (class + Lombok)
+        │   │       ├── OrderResponse.java            # Response thông tin đơn hàng (class + Lombok)
+        │   │       ├── UserProfileResponse.java      # Response thông tin profile (class + Lombok)
+        │   │       ├── UserDashboardResponse.java    # Response thông tin dashboard (class + Lombok)
+        │   │       └── ProductAvailabilityResponse.java # Response tình trạng tồn kho & fallback (class + Lombok)
         │   └── repository/                # Trả về Single<Optional<T>> hoặc Single<List<T>>, bọc jOOQ blocking
         │       ├── UserRepository.java           # Truy vấn users
         │       ├── ProductRepository.java        # Truy vấn products, trừ kho atomic
@@ -109,14 +112,18 @@ Chạy lệnh test:
 mvnw.cmd test
 ```
 
+### Khởi chạy PostgreSQL (nếu chưa có sẵn PostgreSQL trên máy)
+```bash
+docker compose up -d
+```
+
 ### Khởi chạy ứng dụng
 ```bash
 ./mvnw spring-boot:run
 # Hoặc trên Windows:
 mvnw.cmd spring-boot:run
 ```
-Ứng dụng sẽ khởi chạy tại cổng `http://localhost:8080`.
-H2 Console truy cập tại: `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:mem:demo`, User: `sa`, Password để trống).
+Ứng dụng sẽ khởi chạy tại cổng `http://localhost:8080`, kết nối vào cơ sở dữ liệu PostgreSQL `demo_db` tại cổng `5432`.
 
 ---
 

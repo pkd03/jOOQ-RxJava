@@ -3,9 +3,9 @@ package vn.tnteco.demo.wio.rest;
 import io.reactivex.rxjava3.core.Single;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import vn.tnteco.demo.data.dto.UserDashboardResponse;
-import vn.tnteco.demo.data.dto.UserProfileResponse;
-import vn.tnteco.demo.data.dto.UserRecordDto;
+import vn.tnteco.demo.data.dto.response.UserDashboardResponse;
+import vn.tnteco.demo.data.dto.response.UserProfileResponse;
+import vn.tnteco.demo.data.dto.response.UserResponse;
 
 /**
  * Interface định nghĩa các endpoint liên quan đến User theo chuẩn thiết kế API.
@@ -17,7 +17,7 @@ public interface UserOperations {
      * API 1: Lấy thông tin chi tiết user theo ID.
      */
     @GetMapping("/api/users/{id}")
-    Single<UserRecordDto> getUserById(@PathVariable("id") Long id);
+    Single<UserResponse> getUserById(@PathVariable("id") Long id);
 
     /**
      * API 2: Lấy profile user kèm danh sách đơn hàng (minh họa flatMap + Pair).

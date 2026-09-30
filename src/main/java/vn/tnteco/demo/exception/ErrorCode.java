@@ -1,5 +1,7 @@
 package vn.tnteco.demo.exception;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -9,6 +11,8 @@ import org.springframework.http.HttpStatus;
  * - httpStatus: Mã trạng thái HTTP tương ứng
  * - message: Thông điệp mô tả thân thiện, rõ ràng
  */
+@Getter
+@AllArgsConstructor
 public enum ErrorCode {
 
     USER_NOT_FOUND("USER_NOT_FOUND", HttpStatus.NOT_FOUND, "User không tồn tại"),
@@ -22,22 +26,4 @@ public enum ErrorCode {
     private final String code;
     private final HttpStatus httpStatus;
     private final String message;
-
-    ErrorCode(String code, HttpStatus httpStatus, String message) {
-        this.code = code;
-        this.httpStatus = httpStatus;
-        this.message = message;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public HttpStatus getHttpStatus() {
-        return httpStatus;
-    }
-
-    public String getMessage() {
-        return message;
-    }
 }

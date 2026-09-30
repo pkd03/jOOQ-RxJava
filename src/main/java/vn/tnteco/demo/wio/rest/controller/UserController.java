@@ -1,10 +1,11 @@
 package vn.tnteco.demo.wio.rest.controller;
 
 import io.reactivex.rxjava3.core.Single;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
-import vn.tnteco.demo.data.dto.UserDashboardResponse;
-import vn.tnteco.demo.data.dto.UserProfileResponse;
-import vn.tnteco.demo.data.dto.UserRecordDto;
+import vn.tnteco.demo.data.dto.response.UserDashboardResponse;
+import vn.tnteco.demo.data.dto.response.UserProfileResponse;
+import vn.tnteco.demo.data.dto.response.UserResponse;
 import vn.tnteco.demo.service.UserService;
 import vn.tnteco.demo.wio.rest.UserOperations;
 
@@ -13,16 +14,13 @@ import vn.tnteco.demo.wio.rest.UserOperations;
  * Tuân thủ quy ước kiến trúc: Controller chỉ ủy quyền (delegate) sang Service, không chứa nghiệp vụ.
  */
 @RestController
+@RequiredArgsConstructor
 public class UserController implements UserOperations {
 
     private final UserService userService;
 
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
-
     @Override
-    public Single<UserRecordDto> getUserById(Long id) {
+    public Single<UserResponse> getUserById(Long id) {
         return userService.getUserById(id);
     }
 

@@ -3,7 +3,7 @@ package vn.tnteco.demo.validate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import vn.tnteco.demo.data.dto.CreateOrderRequest;
+import vn.tnteco.demo.data.dto.request.CreateOrderRequest;
 import vn.tnteco.demo.exception.AppException;
 import vn.tnteco.demo.exception.ErrorCode;
 

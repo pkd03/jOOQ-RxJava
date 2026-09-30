@@ -2,14 +2,14 @@ package vn.tnteco.demo.service;
 
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import vn.tnteco.demo.data.dto.OrderRecordDto;
-import vn.tnteco.demo.data.dto.UserDashboardResponse;
-import vn.tnteco.demo.data.dto.UserProfileResponse;
-import vn.tnteco.demo.data.dto.UserRecordDto;
+import vn.tnteco.demo.data.dto.response.OrderResponse;
+import vn.tnteco.demo.data.dto.response.UserDashboardResponse;
+import vn.tnteco.demo.data.dto.response.UserProfileResponse;
+import vn.tnteco.demo.data.dto.response.UserResponse;
 import vn.tnteco.demo.data.repository.OrderRepository;
 import vn.tnteco.demo.data.repository.UserRepository;
 import vn.tnteco.demo.exception.AppException;
@@ -18,32 +18,27 @@ import vn.tnteco.demo.exception.ErrorCode;
 import java.math.BigDecimal;
 import java.util.List;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class UserService {
-
-    private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
-
-    public UserService(UserRepository userRepository, OrderRepository orderRepository) {
-        this.userRepository = userRepository;
-        this.orderRepository = orderRepository;
-    }
 
     /**
      * API 1: Lấy thông tin user theo ID.
      *
      * GIẢI THÍCH TẠI SAO DÙNG flatMap:
-     * - Repository trả về Single<Optional<UserRecordDto>> để tránh null rò rỉ vào RxJava.
+     * - Repository trả về Single<Optional<UserResponse>> để tránh null rò rỉ vào RxJava.
      * - Ở tầng Service, ta cần giải nén Optional:
      *   + Nếu có dữ liệu: chuyển thành Single.just(user).
      *   + Nếu rỗng: chuyển thành Single.error(AppException).
-     * - Nếu dùng toán tử map(), kết quả trả về sẽ bị lồng: Single<Single<UserRecordDto>>.
+     * - Nếu dùng toán tử map(), kết quả trả về sẽ bị lồng: Single<Single<UserResponse>>.
      * - Toán tử flatMap() nhận vào 1 giá trị và trả về 1 Single mới, đồng thời tự động "làm phẳng" (flatten)
-     *   để kiểu trả về cuối cùng là Single<UserRecordDto>.
+     *   để kiểu trả về cuối cùng là Single<UserResponse>.
      */
-    public Single<UserRecordDto> getUserById(Long id) {
+    public Single<UserResponse> getUserById(Long id) {
         return userRepository.findById(id)
                 .flatMap(userOpt -> userOpt
                         .map(Single::just)
@@ -58,11 +53,11 @@ public class UserService {
      * - Bước 1: Lấy user qua getUserById(id).
      * - Bước 2: Chỉ khi bước 1 hoàn thành và tìm thấy user hợp lệ, ta mới lấy tiếp danh sách order của user đó.
      *   Đây là quan hệ PHỤ THUỘC TUẦN TỰ (Sequential Dependency: kết quả bước sau phụ thuộc dữ liệu bước trước).
-     * - flatMap nhận kết quả của bước 1 (UserRecordDto) và kích hoạt luồng bất đồng bộ tiếp theo (Single<List<OrderRecordDto>>).
+     * - flatMap nhận kết quả của bước 1 (UserResponse) và kích hoạt luồng bất đồng bộ tiếp theo (Single<List<OrderResponse>>).
      *
      * GIẢI THÍCH TẠI SAO DÙNG Pair:
-     * - Sau khi bước 2 thực hiện xong, ta có List<OrderRecordDto>. Tuy nhiên, để tạo UserProfileResponse,
-     *   ta cần CẢ UserRecordDto (ở bước 1) VÀ List<OrderRecordDto> (ở bước 2).
+     * - Sau khi bước 2 thực hiện xong, ta có List<OrderResponse>. Tuy nhiên, để tạo UserProfileResponse,
+     *   ta cần CẢ UserResponse (ở bước 1) VÀ List<OrderResponse> (ở bước 2).
      * - Trong lập trình hàm, scope của biến bước 1 sẽ bị mất nếu không truyền tiếp.
      * - Pair.of(user, orders) của Apache Commons Lang đóng vai trò như một bộ đôi mang theo (carry)
      *   cả 2 đối tượng qua các bước trong pipeline mà không cần phải khai báo class DTO phụ tạm thời.
@@ -70,7 +65,7 @@ public class UserService {
     public Single<UserProfileResponse> getUserProfile(Long id) {
         return getUserById(id)
                 // flatMap chuyển tiếp sang lấy orders khi user đã hợp lệ
-                .flatMap(user -> orderRepository.findByUserId(user.id())
+                .flatMap(user -> orderRepository.findByUserId(user.getId())
                         // Pair mang theo cả (user, orders) sang bước tiếp theo
                         .map(orders -> Pair.of(user, orders)))
                 // Cuối cùng gom Pair thành UserProfileResponse
@@ -82,8 +77,8 @@ public class UserService {
      *
      * GIẢI THÍCH TẠI SAO DÙNG Single.zip:
      * - Khác với API Profile (cần user rồi mới lấy orders), 3 truy vấn ở đây hoàn toàn ĐỘC LẬP:
-     *   1. Thông tin user (Single<UserRecordDto>)
-     *   2. 5 đơn hàng gần nhất (Single<List<OrderRecordDto>>)
+     *   1. Thông tin user (Single<UserResponse>)
+     *   2. 5 đơn hàng gần nhất (Single<List<OrderResponse>>)
      *   3. Tổng chi tiêu (Single<BigDecimal>)
      * - Nếu dùng flatMap tuần tự, tổng thời gian = T1 + T2 + T3.
      * - Khi dùng Single.zip kết hợp subscribeOn(Schedulers.io()) riêng cho từng nguồn, cả 3 truy vấn
@@ -97,12 +92,12 @@ public class UserService {
         log.info("[DASHBOARD] Bắt đầu tổng hợp dashboard cho userId={}", id);
 
         // Nguồn 1: Lấy user (có subscribeOn IO riêng)
-        Single<UserRecordDto> singleUser = getUserById(id)
+        Single<UserResponse> singleUser = getUserById(id)
                 .subscribeOn(Schedulers.io())
                 .doOnSuccess(u -> log.info("[DASHBOARD] Luồng 1 (User) hoàn tất trên thread: {}", Thread.currentThread().getName()));
 
         // Nguồn 2: Lấy 5 đơn gần nhất (có subscribeOn IO riêng)
-        Single<List<OrderRecordDto>> singleRecentOrders = orderRepository.findRecentOrdersByUserId(id, 5)
+        Single<List<OrderResponse>> singleRecentOrders = orderRepository.findRecentOrdersByUserId(id, 5)
                 .subscribeOn(Schedulers.io())
                 .doOnSuccess(orders -> log.info("[DASHBOARD] Luồng 2 (RecentOrders) hoàn tất trên thread: {}", Thread.currentThread().getName()));
 

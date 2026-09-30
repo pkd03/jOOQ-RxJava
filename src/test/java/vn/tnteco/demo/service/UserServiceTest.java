@@ -8,10 +8,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import vn.tnteco.demo.data.dto.OrderRecordDto;
-import vn.tnteco.demo.data.dto.UserDashboardResponse;
-import vn.tnteco.demo.data.dto.UserProfileResponse;
-import vn.tnteco.demo.data.dto.UserRecordDto;
+import vn.tnteco.demo.data.dto.response.OrderResponse;
+import vn.tnteco.demo.data.dto.response.UserDashboardResponse;
+import vn.tnteco.demo.data.dto.response.UserProfileResponse;
+import vn.tnteco.demo.data.dto.response.UserResponse;
 import vn.tnteco.demo.data.repository.OrderRepository;
 import vn.tnteco.demo.data.repository.UserRepository;
 import vn.tnteco.demo.exception.AppException;
@@ -43,23 +43,23 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("flatMap thành công: tìm thấy user và trả về UserRecordDto")
+    @DisplayName("flatMap thành công: tìm thấy user và trả về UserResponse")
     void shouldReturnUser_WhenUserExists() {
         // Arrange
         Long userId = 1L;
-        UserRecordDto mockUser = new UserRecordDto(userId, "Nguyen Van A", "a@tnteco.vn", 28, "ACTIVE");
+        UserResponse mockUser = new UserResponse(userId, "Nguyen Van A", "a@tnteco.vn", 28, "ACTIVE");
         when(userRepository.findById(userId)).thenReturn(Single.just(Optional.of(mockUser)));
 
         // Act: Đăng ký TestObserver vào Single
-        TestObserver<UserRecordDto> observer = userService.getUserById(userId).test();
+        TestObserver<UserResponse> observer = userService.getUserById(userId).test();
 
         // Assert: Kiểm tra bằng TestObserver
         observer.awaitDone(2, java.util.concurrent.TimeUnit.SECONDS);
         observer.assertComplete();
         observer.assertNoErrors();
         observer.assertValue(user -> {
-            assertEquals(userId, user.id());
-            assertEquals("Nguyen Van A", user.name());
+            assertEquals(userId, user.getId());
+            assertEquals("Nguyen Van A", user.getName());
             return true;
         });
 
@@ -74,7 +74,7 @@ class UserServiceTest {
         when(userRepository.findById(nonExistentId)).thenReturn(Single.just(Optional.empty()));
 
         // Act
-        TestObserver<UserRecordDto> observer = userService.getUserById(nonExistentId).test();
+        TestObserver<UserResponse> observer = userService.getUserById(nonExistentId).test();
 
         // Assert: RxJava stream phải phát lỗi AppException
         observer.awaitDone(2, java.util.concurrent.TimeUnit.SECONDS);
@@ -92,10 +92,10 @@ class UserServiceTest {
     void shouldReturnUserProfile_UsingFlatMapAndPair() {
         // Arrange
         Long userId = 1L;
-        UserRecordDto mockUser = new UserRecordDto(userId, "Nguyen Van A", "a@tnteco.vn", 28, "ACTIVE");
-        List<OrderRecordDto> mockOrders = List.of(
-                new OrderRecordDto(101L, userId, 1L, 1, new BigDecimal("1750000"), LocalDateTime.now()),
-                new OrderRecordDto(102L, userId, 2L, 2, new BigDecimal("4600000"), LocalDateTime.now())
+        UserResponse mockUser = new UserResponse(userId, "Nguyen Van A", "a@tnteco.vn", 28, "ACTIVE");
+        List<OrderResponse> mockOrders = List.of(
+                new OrderResponse(101L, userId, 1L, 1, new BigDecimal("1750000"), LocalDateTime.now()),
+                new OrderResponse(102L, userId, 2L, 2, new BigDecimal("4600000"), LocalDateTime.now())
         );
 
         when(userRepository.findById(userId)).thenReturn(Single.just(Optional.of(mockUser)));
@@ -109,9 +109,9 @@ class UserServiceTest {
         observer.assertComplete();
         observer.assertNoErrors();
         observer.assertValue(response -> {
-            assertEquals(userId, response.user().id());
-            assertEquals(2, response.orders().size());
-            assertEquals(101L, response.orders().get(0).id());
+            assertEquals(userId, response.getUser().getId());
+            assertEquals(2, response.getOrders().size());
+            assertEquals(101L, response.getOrders().get(0).getId());
             return true;
         });
 
@@ -124,9 +124,9 @@ class UserServiceTest {
     void shouldZipSuccessfully_WhenAllThreeSourcesSucceed() {
         // Arrange
         Long userId = 1L;
-        UserRecordDto mockUser = new UserRecordDto(userId, "Nguyen Van A", "a@tnteco.vn", 28, "ACTIVE");
-        List<OrderRecordDto> mockRecentOrders = List.of(
-                new OrderRecordDto(101L, userId, 1L, 1, new BigDecimal("1750000"), LocalDateTime.now())
+        UserResponse mockUser = new UserResponse(userId, "Nguyen Van A", "a@tnteco.vn", 28, "ACTIVE");
+        List<OrderResponse> mockRecentOrders = List.of(
+                new OrderResponse(101L, userId, 1L, 1, new BigDecimal("1750000"), LocalDateTime.now())
         );
         BigDecimal mockTotalSpent = new BigDecimal("6350000");
 
@@ -142,9 +142,9 @@ class UserServiceTest {
         observer.assertComplete();
         observer.assertNoErrors();
         observer.assertValue(dashboard -> {
-            assertEquals(userId, dashboard.user().id());
-            assertEquals(1, dashboard.recentOrders().size());
-            assertEquals(new BigDecimal("6350000"), dashboard.totalSpent());
+            assertEquals(userId, dashboard.getUser().getId());
+            assertEquals(1, dashboard.getRecentOrders().size());
+            assertEquals(new BigDecimal("6350000"), dashboard.getTotalSpent());
             return true;
         });
     }
@@ -154,8 +154,8 @@ class UserServiceTest {
     void shouldEmitError_WhenOneSourceFailsInZip() {
         // Arrange: User thành công, RecentOrders thành công, nhưng TotalSpent gặp lỗi DATABASE_ERROR
         Long userId = 1L;
-        UserRecordDto mockUser = new UserRecordDto(userId, "Nguyen Van A", "a@tnteco.vn", 28, "ACTIVE");
-        List<OrderRecordDto> mockRecentOrders = List.of();
+        UserResponse mockUser = new UserResponse(userId, "Nguyen Van A", "a@tnteco.vn", 28, "ACTIVE");
+        List<OrderResponse> mockRecentOrders = List.of();
 
         when(userRepository.findById(userId)).thenReturn(Single.just(Optional.of(mockUser)));
         when(orderRepository.findRecentOrdersByUserId(userId, 5)).thenReturn(Single.just(mockRecentOrders));

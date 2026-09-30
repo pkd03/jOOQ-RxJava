@@ -1,9 +1,12 @@
 package vn.tnteco.demo.exception;
 
+import lombok.Getter;
+
 /**
  * Exception tùy chỉnh chứa ErrorCode chuẩn của hệ sinh thái backend.
  * Cho phép kèm theo chi tiết bổ sung (detail) nếu cần thiết để log hoặc mô tả rõ hơn.
  */
+@Getter
 public class AppException extends RuntimeException {
 
     private final ErrorCode errorCode;
@@ -21,9 +24,5 @@ public class AppException extends RuntimeException {
     public AppException(ErrorCode errorCode, Throwable cause) {
         super(errorCode.getMessage(), cause);
         this.errorCode = errorCode;
-    }
-
-    public ErrorCode getErrorCode() {
-        return errorCode;
     }
 }

@@ -1,11 +1,11 @@
 package vn.tnteco.demo.service;
 
 import io.reactivex.rxjava3.core.Single;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import vn.tnteco.demo.data.dto.CreateOrderRequest;
-import vn.tnteco.demo.data.dto.OrderRecordDto;
+import vn.tnteco.demo.data.dto.request.CreateOrderRequest;
+import vn.tnteco.demo.data.dto.response.OrderResponse;
 import vn.tnteco.demo.data.repository.OrderRepository;
 import vn.tnteco.demo.data.repository.ProductRepository;
 import vn.tnteco.demo.data.repository.UserRepository;
@@ -13,25 +13,15 @@ import vn.tnteco.demo.exception.AppException;
 import vn.tnteco.demo.exception.ErrorCode;
 import vn.tnteco.demo.validate.OrderRequestValidator;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class OrderService {
-
-    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
     private final OrderRequestValidator orderRequestValidator;
-
-    public OrderService(UserRepository userRepository,
-                        ProductRepository productRepository,
-                        OrderRepository orderRepository,
-                        OrderRequestValidator orderRequestValidator) {
-        this.userRepository = userRepository;
-        this.productRepository = productRepository;
-        this.orderRepository = orderRepository;
-        this.orderRequestValidator = orderRequestValidator;
-    }
 
     /**
      * API 4: Tạo đơn hàng với chuỗi flatMap tuần tự và Transaction jOOQ.
@@ -63,9 +53,9 @@ public class OrderService {
      * 3. Do đó, với thao tác ghi: NẾU LỖI THÌ PHẢI BÁO LỖI NGAY cho client/người dùng hoặc
      *    sử dụng cơ chế Idempotency-Key kiểm tra trùng lặp có chủ đích, KHÔNG BAO GIỜ retry ngầm!
      */
-    public Single<OrderRecordDto> createOrder(CreateOrderRequest request) {
+    public Single<OrderResponse> createOrder(CreateOrderRequest request) {
         log.info("[ORDER] Bắt đầu xử lý tạo đơn hàng: userId={}, productId={}, quantity={}",
-                request.userId(), request.productId(), request.quantity());
+                request.getUserId(), request.getProductId(), request.getQuantity());
 
         return Single.fromCallable(() -> {
             // Bước 1: Validate input
@@ -73,43 +63,43 @@ public class OrderService {
             return request;
         })
         // Bước 2: Kiểm tra User
-        .flatMap(req -> userRepository.findById(req.userId())
+        .flatMap(req -> userRepository.findById(req.getUserId())
                 .flatMap(userOpt -> {
                     if (userOpt.isEmpty()) {
                         return Single.error(new AppException(ErrorCode.USER_NOT_FOUND,
-                                "Không tìm thấy user với id: " + req.userId()));
+                                "Không tìm thấy user với id: " + req.getUserId()));
                     }
                     var user = userOpt.get();
                     if (!user.isActive()) {
                         return Single.error(new AppException(ErrorCode.USER_INACTIVE,
-                                "Tài khoản user id=" + req.userId() + " đang bị khóa hoặc không hoạt động"));
+                                "Tài khoản user id=" + req.getUserId() + " đang bị khóa hoặc không hoạt động"));
                     }
                     return Single.just(user);
                 })
         )
         // Bước 3: Kiểm tra Product
-        .flatMap(user -> productRepository.findById(request.productId())
+        .flatMap(user -> productRepository.findById(request.getProductId())
                 .flatMap(prodOpt -> {
                     if (prodOpt.isEmpty()) {
                         return Single.error(new AppException(ErrorCode.PRODUCT_NOT_FOUND,
-                                "Không tìm thấy sản phẩm với id: " + request.productId()));
+                                "Không tìm thấy sản phẩm với id: " + request.getProductId()));
                     }
                     var product = prodOpt.get();
-                    if (product.stock() < request.quantity()) {
+                    if (product.getStock() < request.getQuantity()) {
                         return Single.error(new AppException(ErrorCode.INSUFFICIENT_STOCK,
-                                "Kho chỉ còn " + product.stock() + " sản phẩm, không đủ số lượng yêu cầu: " + request.quantity()));
+                                "Kho chỉ còn " + product.getStock() + " sản phẩm, không đủ số lượng yêu cầu: " + request.getQuantity()));
                     }
                     return Single.just(product);
                 })
         )
         // Bước 4: Chạy transaction jOOQ: Trừ kho và tạo Order
         .flatMap(product -> orderRepository.createOrderInTransaction(
-                request.userId(),
-                request.productId(),
-                request.quantity(),
-                product.price()
+                request.getUserId(),
+                request.getProductId(),
+                request.getQuantity(),
+                product.getPrice()
         ))
         .doOnSuccess(order -> log.info("[ORDER] Tạo đơn hàng thành công: orderId={}, amount={}",
-                order.id(), order.amount()));
+                order.getId(), order.getAmount()));
     }
 }

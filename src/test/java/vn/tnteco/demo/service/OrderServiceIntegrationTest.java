@@ -5,9 +5,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import vn.tnteco.demo.data.dto.CreateOrderRequest;
-import vn.tnteco.demo.data.dto.OrderRecordDto;
-import vn.tnteco.demo.data.dto.ProductRecordDto;
+import vn.tnteco.demo.data.dto.request.CreateOrderRequest;
+import vn.tnteco.demo.data.dto.response.OrderResponse;
+import vn.tnteco.demo.data.dto.response.ProductResponse;
 import vn.tnteco.demo.data.repository.ProductRepository;
 import vn.tnteco.demo.exception.AppException;
 import vn.tnteco.demo.exception.ErrorCode;
@@ -36,15 +36,15 @@ class OrderServiceIntegrationTest {
         int initialStock = 3;
 
         // Xác nhận tồn kho ban đầu
-        Optional<ProductRecordDto> initialProduct = productRepository.findById(productId).blockingGet();
+        Optional<ProductResponse> initialProduct = productRepository.findById(productId).blockingGet();
         assertTrue(initialProduct.isPresent());
-        assertEquals(initialStock, initialProduct.get().stock());
+        assertEquals(initialStock, initialProduct.get().getStock());
 
         // Yêu cầu mua số lượng 10 (vượt quá tồn kho 3)
         CreateOrderRequest request = new CreateOrderRequest(userId, productId, 10);
 
         // Act: Đăng ký TestObserver
-        TestObserver<OrderRecordDto> observer = orderService.createOrder(request).test();
+        TestObserver<OrderResponse> observer = orderService.createOrder(request).test();
 
         // Assert: Stream phải nhận lỗi INSUFFICIENT_STOCK
         observer.awaitDone(3, java.util.concurrent.TimeUnit.SECONDS);
@@ -57,9 +57,9 @@ class OrderServiceIntegrationTest {
         });
 
         // QUAN TRỌNG: Kiểm tra lại trong DB xem tồn kho có bị trừ hay không (xác nhận transaction đã rollback)
-        Optional<ProductRecordDto> productAfterRollback = productRepository.findById(productId).blockingGet();
+        Optional<ProductResponse> productAfterRollback = productRepository.findById(productId).blockingGet();
         assertTrue(productAfterRollback.isPresent());
-        assertEquals(initialStock, productAfterRollback.get().stock(),
+        assertEquals(initialStock, productAfterRollback.get().getStock(),
                 "Tồn kho của sản phẩm không được thay đổi do Transaction jOOQ đã rollback thành công!");
     }
 
@@ -74,25 +74,25 @@ class OrderServiceIntegrationTest {
         CreateOrderRequest request = new CreateOrderRequest(userId, productId, orderQuantity);
 
         // Act
-        TestObserver<OrderRecordDto> observer = orderService.createOrder(request).test();
+        TestObserver<OrderResponse> observer = orderService.createOrder(request).test();
 
         // Assert
         observer.awaitDone(3, java.util.concurrent.TimeUnit.SECONDS);
         observer.assertComplete();
         observer.assertNoErrors();
         observer.assertValue(order -> {
-            assertNotNull(order.id());
-            assertEquals(userId, order.userId());
-            assertEquals(productId, order.productId());
-            assertEquals(orderQuantity, order.quantity());
-            assertEquals(new BigDecimal("3500000.00"), order.amount());
+            assertNotNull(order.getId());
+            assertEquals(userId, order.getUserId());
+            assertEquals(productId, order.getProductId());
+            assertEquals(orderQuantity, order.getQuantity());
+            assertEquals(new BigDecimal("3500000.00"), order.getAmount());
             return true;
         });
 
         // Kiểm tra tồn kho đã bị trừ từ 15 xuống 13
-        Optional<ProductRecordDto> updatedProduct = productRepository.findById(productId).blockingGet();
+        Optional<ProductResponse> updatedProduct = productRepository.findById(productId).blockingGet();
         assertTrue(updatedProduct.isPresent());
-        assertEquals(13, updatedProduct.get().stock());
+        assertEquals(13, updatedProduct.get().getStock());
     }
 
     @Test
@@ -101,7 +101,7 @@ class OrderServiceIntegrationTest {
         // User 3 là INACTIVE trong data.sql
         CreateOrderRequest request = new CreateOrderRequest(3L, 1L, 1);
 
-        TestObserver<OrderRecordDto> observer = orderService.createOrder(request).test();
+        TestObserver<OrderResponse> observer = orderService.createOrder(request).test();
 
         observer.awaitDone(3, java.util.concurrent.TimeUnit.SECONDS);
         observer.assertNotComplete();

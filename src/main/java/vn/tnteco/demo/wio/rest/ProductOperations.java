@@ -3,7 +3,7 @@ package vn.tnteco.demo.wio.rest;
 import io.reactivex.rxjava3.core.Single;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import vn.tnteco.demo.data.dto.ProductAvailabilityResponse;
+import vn.tnteco.demo.data.dto.response.ProductAvailabilityResponse;
 
 /**
  * Interface định nghĩa các endpoint liên quan đến Product.

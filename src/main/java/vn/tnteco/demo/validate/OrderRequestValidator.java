@@ -1,7 +1,7 @@
 package vn.tnteco.demo.validate;
 
 import org.springframework.stereotype.Component;
-import vn.tnteco.demo.data.dto.CreateOrderRequest;
+import vn.tnteco.demo.data.dto.request.CreateOrderRequest;
 import vn.tnteco.demo.exception.AppException;
 import vn.tnteco.demo.exception.ErrorCode;
 
@@ -20,13 +20,13 @@ public class OrderRequestValidator {
         if (request == null) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Yêu cầu tạo đơn hàng không được để trống (null)");
         }
-        if (request.userId() == null || request.userId() <= 0) {
+        if (request.getUserId() == null || request.getUserId() <= 0) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "userId không hợp lệ hoặc để trống");
         }
-        if (request.productId() == null || request.productId() <= 0) {
+        if (request.getProductId() == null || request.getProductId() <= 0) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "productId không hợp lệ hoặc để trống");
         }
-        if (request.quantity() == null || request.quantity() <= 0) {
+        if (request.getQuantity() == null || request.getQuantity() <= 0) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Số lượng đặt hàng (quantity) phải lớn hơn 0");
         }
     }

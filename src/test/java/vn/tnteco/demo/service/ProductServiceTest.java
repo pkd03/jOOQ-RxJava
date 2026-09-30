@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import vn.tnteco.demo.data.dto.ProductAvailabilityResponse;
-import vn.tnteco.demo.data.dto.ProductRecordDto;
+import vn.tnteco.demo.data.dto.response.ProductAvailabilityResponse;
+import vn.tnteco.demo.data.dto.response.ProductResponse;
 import vn.tnteco.demo.data.repository.ProductRepository;
 import vn.tnteco.demo.exception.AppException;
 import vn.tnteco.demo.exception.ErrorCode;
@@ -48,7 +48,7 @@ class ProductServiceTest {
             if (attempt <= 2) {
                 return Single.error(new SQLTransientException("Mất kết nối tạm thời lần " + attempt));
             } else {
-                return Single.just(Optional.of(new ProductRecordDto(
+                return Single.just(Optional.of(new ProductResponse(
                         productId,
                         "Ban phim co Keychron K2",
                         new BigDecimal("1750000"),
@@ -65,10 +65,10 @@ class ProductServiceTest {
         observer.assertComplete();
         observer.assertNoErrors();
         observer.assertValue(response -> {
-            assertEquals(productId, response.productId());
-            assertTrue(response.available());
-            assertEquals(15, response.stock());
-            assertTrue(response.note().contains("Còn hàng"));
+            assertEquals(productId, response.getProductId());
+            assertTrue(response.isAvailable());
+            assertEquals(15, response.getStock());
+            assertTrue(response.getNote().contains("Còn hàng"));
             return true;
         });
 
@@ -96,9 +96,9 @@ class ProductServiceTest {
         observer.assertComplete();
         observer.assertNoErrors();
         observer.assertValue(response -> {
-            assertEquals(productId, response.productId());
-            assertFalse(response.available());
-            assertTrue(response.note().contains("bảo trì"));
+            assertEquals(productId, response.getProductId());
+            assertFalse(response.isAvailable());
+            assertTrue(response.getNote().contains("bảo trì"));
             return true;
         });
 

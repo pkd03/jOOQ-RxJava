@@ -1,11 +1,11 @@
 package vn.tnteco.demo.service;
 
 import io.reactivex.rxjava3.core.Single;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import vn.tnteco.demo.data.dto.ProductAvailabilityResponse;
-import vn.tnteco.demo.data.dto.ProductRecordDto;
+import vn.tnteco.demo.data.dto.response.ProductAvailabilityResponse;
+import vn.tnteco.demo.data.dto.response.ProductResponse;
 import vn.tnteco.demo.data.repository.ProductRepository;
 import vn.tnteco.demo.exception.AppException;
 import vn.tnteco.demo.exception.ErrorCode;
@@ -13,24 +13,20 @@ import vn.tnteco.demo.exception.ErrorCode;
 import java.io.IOException;
 import java.sql.SQLTransientException;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class ProductService {
 
-    private static final Logger log = LoggerFactory.getLogger(ProductService.class);
-
     private final ProductRepository productRepository;
-
-    public ProductService(ProductRepository productRepository) {
-        this.productRepository = productRepository;
-    }
 
     /**
      * Tìm sản phẩm theo id.
      * Dùng Single.defer(...) để mỗi lần subscribe / retry thì hàm productRepository.findById(id)
      * sẽ được thực thi lại mới hoàn toàn, thay vì dùng lại instance Single cũ đã emit lỗi.
-     * Dùng flatMap để chuyển Optional sang ProductRecordDto hoặc ném PRODUCT_NOT_FOUND.
+     * Dùng flatMap để chuyển Optional sang ProductResponse hoặc ném PRODUCT_NOT_FOUND.
      */
-    public Single<ProductRecordDto> getProductById(Long id) {
+    public Single<ProductResponse> getProductById(Long id) {
         return Single.defer(() -> productRepository.findById(id))
                 .flatMap(productOpt -> productOpt
                         .map(Single::just)
@@ -64,17 +60,17 @@ public class ProductService {
                     return shouldRetry;
                 })
                 .map(product -> {
-                    boolean isAvailable = product.stock() != null && product.stock() > 0;
+                    boolean isAvailable = product.getStock() != null && product.getStock() > 0;
                     String note = isAvailable
-                            ? "Còn hàng (" + product.stock() + " sản phẩm)"
+                            ? "Còn hàng (" + product.getStock() + " sản phẩm)"
                             : "Đã hết hàng";
-                    return new ProductAvailabilityResponse(
-                            product.id(),
-                            product.name(),
-                            product.stock(),
-                            isAvailable,
-                            note
-                    );
+                    return ProductAvailabilityResponse.builder()
+                            .productId(product.getId())
+                            .productName(product.getName())
+                            .stock(product.getStock())
+                            .available(isAvailable)
+                            .note(note)
+                            .build();
                 })
                 // Fallback khi lỗi cơ sở hạ tầng kéo dài sau khi đã retry
                 .onErrorResumeNext(throwable -> {
@@ -86,13 +82,13 @@ public class ProductService {
                     // Nếu là lỗi tạm thời hoặc lỗi hạ tầng sau khi đã thử lại bất thành, fallback an toàn
                     log.error("[FALLBACK] Kích hoạt fallback cho productId={} sau khi retry thất bại: {}",
                             id, throwable.getMessage());
-                    return Single.just(new ProductAvailabilityResponse(
-                            id,
-                            "Sản phẩm tạm thời không khả dụng",
-                            0,
-                            false,
-                            "Hệ thống kiểm tra kho đang bảo trì, vui lòng kiểm tra lại sau."
-                    ));
+                    return Single.just(ProductAvailabilityResponse.builder()
+                            .productId(id)
+                            .productName("Sản phẩm tạm thời không khả dụng")
+                            .stock(0)
+                            .available(false)
+                            .note("Hệ thống kiểm tra kho đang bảo trì, vui lòng kiểm tra lại sau.")
+                            .build());
                 });
     }
 

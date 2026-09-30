@@ -2,9 +2,10 @@ package vn.tnteco.demo.data.repository;
 
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
-import vn.tnteco.demo.data.dto.UserRecordDto;
+import vn.tnteco.demo.data.dto.response.UserResponse;
 import vn.tnteco.demo.jooq.tables.records.UsersRecord;
 
 import java.util.Optional;
@@ -22,19 +23,16 @@ import static vn.tnteco.demo.jooq.Tables.USERS;
  *    bằng cách dùng fetchOptional() của jOOQ.
  */
 @Repository
+@RequiredArgsConstructor
 public class UserRepository {
 
     private final DSLContext dsl;
 
-    public UserRepository(DSLContext dsl) {
-        this.dsl = dsl;
-    }
-
     /**
      * Tìm user theo ID.
-     * Trả về Single<Optional<UserRecordDto>> để tránh null rò rỉ vào RxJava.
+     * Trả về Single<Optional<UserResponse>> để tránh null rò rỉ vào RxJava.
      */
-    public Single<Optional<UserRecordDto>> findById(Long id) {
+    public Single<Optional<UserResponse>> findById(Long id) {
         return Single.fromCallable(() -> {
             Optional<UsersRecord> recordOpt = dsl.selectFrom(USERS)
                     .where(USERS.ID.eq(id))
@@ -44,13 +42,13 @@ public class UserRepository {
         }).subscribeOn(Schedulers.io());
     }
 
-    private UserRecordDto mapToDto(UsersRecord r) {
-        return new UserRecordDto(
-                r.getId(),
-                r.getName(),
-                r.getEmail(),
-                r.getAge(),
-                r.getStatus()
-        );
+    private UserResponse mapToDto(UsersRecord r) {
+        return UserResponse.builder()
+                .id(r.getId())
+                .name(r.getName())
+                .email(r.getEmail())
+                .age(r.getAge())
+                .status(r.getStatus())
+                .build();
     }
 }
