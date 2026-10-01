@@ -4,6 +4,7 @@ import io.reactivex.rxjava3.core.Single;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import vn.tnteco.demo.data.dto.response.PageResponse;
 import vn.tnteco.demo.data.dto.response.ProductAvailabilityResponse;
 import vn.tnteco.demo.data.dto.response.ProductResponse;
 import vn.tnteco.demo.data.repository.ProductRepository;
@@ -32,6 +33,25 @@ public class ProductService {
                         .map(Single::just)
                         .orElseGet(() -> Single.error(new AppException(ErrorCode.PRODUCT_NOT_FOUND,
                                 "Không tìm thấy sản phẩm với id: " + id))));
+    }
+
+    public Single<PageResponse<ProductResponse>> getAllProduct(int page, int size){
+        return Single.zip(
+                productRepository.getAllProduct(page, size),
+                productRepository.countProducts(),
+                (items, totalElements) -> {
+                    int totalPages = (int) Math.ceil((double) totalElements / size);
+                    boolean hasNext = page + 1 < totalPages;
+                    return PageResponse.<ProductResponse>builder()
+                            .items(items)
+                            .page(page)
+                            .size(size)
+                            .totalElements(totalElements)
+                            .totalPages(totalPages)
+                            .hasNext(hasNext)
+                            .build();
+            }
+        );
     }
 
     /**

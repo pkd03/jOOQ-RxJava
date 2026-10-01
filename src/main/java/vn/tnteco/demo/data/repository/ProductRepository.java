@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import vn.tnteco.demo.data.dto.response.ProductResponse;
 import vn.tnteco.demo.jooq.tables.records.ProductsRecord;
 
+import java.util.List;
 import java.util.Optional;
 
 import static vn.tnteco.demo.jooq.Tables.PRODUCTS;
@@ -48,6 +49,28 @@ public class ProductRepository {
                 .set(PRODUCTS.STOCK, PRODUCTS.STOCK.minus(quantity))
                 .where(PRODUCTS.ID.eq(productId).and(PRODUCTS.STOCK.ge(quantity)))
                 .execute();
+    }
+
+    //get all
+    public  Single<List<ProductResponse>> getAllProduct(int page, int size){
+        return Single.fromCallable(()->
+                dsl.selectFrom(PRODUCTS)
+                        .orderBy(PRODUCTS.ID.asc())
+                        .limit(size)
+                        .offset(page * size)
+                        .fetch(this::mapToDto)
+        ).subscribeOn(Schedulers.io());
+    }
+
+    /**
+     * Đếm tổng số lượng sản phẩm để tính totalPages
+     */
+    public Single<Long> countProducts() {
+        return Single.fromCallable(() ->
+                dsl.selectCount()
+                        .from(PRODUCTS)
+                        .fetchOne(0, Long.class)
+        ).subscribeOn(Schedulers.io());
     }
 
     private ProductResponse mapToDto(ProductsRecord r) {
